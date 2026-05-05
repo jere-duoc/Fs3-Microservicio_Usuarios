@@ -9,6 +9,8 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDate;
 
+import DuocQuin.Usuarios.utils.EncryptedStringConverter;
+
 @Entity
 @Table(name = "usuarios")
 @AllArgsConstructor
@@ -22,13 +24,18 @@ public class Usuario {
     @Column(name = "id_usuario")
     private Long idUsuario;
     
+    @Convert(converter = EncryptedStringConverter.class)//Encriptado con un convertidor para que se pueda comparar con el run original
     @NotBlank(message = "El RUN es obligatorio")
-    @Column(name = "run", nullable = false, length = 10, unique = true)
+    @Column(name = "run", nullable = false, length = 255)
     private String run;
     
+    @Convert(converter = EncryptedStringConverter.class)//Encriptado con el mismo convertidor
     @NotBlank(message = "El dígito verificador es obligatorio")
-    @Column(name = "digito_verificador", nullable = false, length = 1)
+    @Column(name = "digito_verificador", nullable = false, length = 255)
     private String digitoVerificador;
+
+    @Column(name = "run_hash", length = 255, unique = true)// Esto es para la validación del rut para ver si esta en la base
+    private String runHash;
     
     @Column(name = "primer_nombre", length = 50)
     private String primerNombre;
@@ -48,14 +55,16 @@ public class Usuario {
     @Column(name = "genero", length = 20)
     private String genero;
 
+    @Convert(converter = EncryptedStringConverter.class)//Encriptado con un convertidor
     @Email(message = "El correo electrónico debe ser válido")
-    @Column(name = "correo_electronico", length = 100)
+    @Column(name = "correo_electronico", length = 255)
     private String correoElectronico;
 
-    @Column(name = "contrasena", length = 100)
+    @Column(name = "contrasena", length = 255)
     private String contrasena;
 
-    @Column(name = "telefono_celular", length = 9)
+    @Convert(converter = EncryptedStringConverter.class)//Encriptado con un convertidor
+    @Column(name = "telefono_celular", length = 255)
     private String telefonoCelular;
 
     @Column(name = "acepto_terminos")
