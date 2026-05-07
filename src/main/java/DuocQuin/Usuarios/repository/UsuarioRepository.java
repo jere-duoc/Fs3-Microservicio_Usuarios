@@ -21,6 +21,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     Optional<Usuario> findByRunHash(String runHash);
 
+    Optional<Usuario> findByCorreoElectronico(String correoElectronico);
+
     List<Usuario> findByPrimerNombreContainingIgnoreCaseOrPrimerApellidoContainingIgnoreCase(
         String primerNombre , String primerApellido
     );

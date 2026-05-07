@@ -1,4 +1,5 @@
 package DuocQuin.Usuarios.model;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -70,6 +71,13 @@ public class Usuario {
     @Column(name = "acepto_terminos")
     private Boolean aceptoTerminos;
 
+    @Column(name = "oposicion")
+    private Boolean oposicion = false;
+
+    @Column(name = "activo")
+    private Boolean activo = true;
+
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_rol")
     private Rol rol;

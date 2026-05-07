@@ -1,6 +1,7 @@
 package DuocQuin.Usuarios.controller;
 
 import DuocQuin.Usuarios.model.Usuario;
+import DuocQuin.Usuarios.model.SolicitudArco;
 import DuocQuin.Usuarios.service.UsuarioService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +52,23 @@ public class UsuarioController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUsuario(@PathVariable Long id, @Valid @RequestBody Usuario usuarioDetails) {
         try {
+            Optional<Usuario> actualOpt = usuarioService.findById(id);
             Usuario usuarioActualizado = usuarioService.update(id, usuarioDetails);
+            
+            // Determinar qué derecho se ejerció
+            if (actualOpt.isPresent()) {
+                Usuario actual = actualOpt.get();
+                if (!actual.getOposicion().equals(usuarioActualizado.getOposicion())) {
+                    usuarioService.registrarSolicitudArco(usuarioActualizado, 
+                        SolicitudArco.TipoDerecho.OPOSICION, 
+                        "Cambio de estado de oposición a: " + usuarioActualizado.getOposicion());
+                } else {
+                    usuarioService.registrarSolicitudArco(usuarioActualizado, 
+                        SolicitudArco.TipoDerecho.RECTIFICACION, 
+                        "Actualización de datos personales (Rectificación).");
+                }
+            }
+            
             return ResponseEntity.ok(usuarioActualizado);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
@@ -87,5 +104,21 @@ public class UsuarioController {
         }
         
         return ResponseEntity.ok(usuarios);
+    }
+
+    @PostMapping("/{id}/arco/acceso")
+    public ResponseEntity<?> registrarAcceso(@PathVariable Long id) {
+        try {
+            return usuarioService.findById(id)
+                .map(u -> {
+                    usuarioService.registrarSolicitudArco(u, 
+                        SolicitudArco.TipoDerecho.ACCESO, 
+                        "El usuario descargó o consultó sus datos personales.");
+                    return ResponseEntity.ok().build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 }

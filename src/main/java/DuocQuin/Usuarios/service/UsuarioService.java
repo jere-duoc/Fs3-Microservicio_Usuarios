@@ -5,6 +5,8 @@ import DuocQuin.Usuarios.model.Usuario;
 import DuocQuin.Usuarios.utils.HashUtil;
 
 import DuocQuin.Usuarios.repository.UsuarioRepository;
+import DuocQuin.Usuarios.repository.SolicitudArcoRepository;
+import DuocQuin.Usuarios.model.SolicitudArco;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,9 @@ public class UsuarioService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private SolicitudArcoRepository arcoRepository;
+
     public List<Usuario> findAll() {
         return usuarioRepository.findAll();
     }
@@ -33,12 +38,24 @@ public class UsuarioService {
     }
 
     public Usuario save(Usuario usuario) {
+        String runOriginal;
+        String dvOriginal;
 
-        if(usuario.getRun()== null || !usuario.getRun().contains("-")){
-            throw new RuntimeException("El run que ingreso no cumple con el formato,el formato debe ser 12345678-9");
+        if (usuario.getRun() != null && usuario.getRun().contains("-")) {
+            // Formato con guión: "12345678-9"
+            String[] partes = usuario.getRun().split("-");
+            runOriginal = partes[0];
+            dvOriginal = partes[1];
+        } else if (usuario.getRun() != null && usuario.getDigitoVerificador() != null) {
+            // Formato separado: run="12345678", digitoVerificador="9"
+            runOriginal = usuario.getRun();
+            dvOriginal = usuario.getDigitoVerificador();
+        } else {
+            throw new RuntimeException("El RUN es obligatorio y debe tener un formato válido (12345678-9 o campos separados)");
         }
+
         if (usuario.getCorreoElectronico() == null || usuario.getCorreoElectronico().isEmpty()) {
-        throw new RuntimeException("El correo es obligatorio");
+            throw new RuntimeException("El correo es obligatorio");
         }
 
         if (usuario.getTelefonoCelular() == null || usuario.getTelefonoCelular().isEmpty()) {
@@ -49,18 +66,14 @@ public class UsuarioService {
             throw new RuntimeException("La contraseña es obligatoria");
         }
 
-        String[] partes = usuario.getRun().split("-"); //Separa el rut y el digito verificador para guardarlo por primera vez en la base
-        String runOriginal = partes[0];
-        String dvOriginal = partes[1];
-
-        //Hash del run para validar que no se repita el run en la base de datos, ya que el run esta encriptado y no se puede comparar con el run original
+        // Hash del run para validar que no se repita
         String runHash = HashUtil.sha256(runOriginal);
 
         if (usuarioRepository.existsByRunHash(runHash)) {
-            throw new RuntimeException("Ya existe un usuario con el RUN: " + usuario.getRun());
+            throw new RuntimeException("Ya existe un usuario con el RUN: " + runOriginal + "-" + dvOriginal);
         }
 
-        //Encriptacion del Run y del digito verificador
+        // Encriptacion del Run y del digito verificador
         usuario.setRun(runOriginal);
         usuario.setDigitoVerificador(dvOriginal);
         usuario.setRunHash(runHash);
@@ -76,14 +89,19 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
         
-        //Valida que el rut que se ingresa para actualizar cumpla con el formato
-        if (usuarioDetails.getRun()== null || !usuarioDetails.getRun().contains("-")) {
-            throw new RuntimeException("Formato de run invalido");
+        String runOriginal;
+        String dvOriginal;
+
+        if (usuarioDetails.getRun() != null && usuarioDetails.getRun().contains("-")) {
+            String[] partes = usuarioDetails.getRun().split("-");
+            runOriginal = partes[0];
+            dvOriginal = partes[1];
+        } else if (usuarioDetails.getRun() != null && usuarioDetails.getDigitoVerificador() != null) {
+            runOriginal = usuarioDetails.getRun();
+            dvOriginal = usuarioDetails.getDigitoVerificador();
+        } else {
+            throw new RuntimeException("Formato de RUN inválido");
         }
-        //Separa del rut actualizado ,el run y el digito verificador
-        String[] partes = usuarioDetails.getRun().split("-");
-        String runOriginal = partes[0];
-        String dvOriginal = partes[1];
 
         String runHash = HashUtil.sha256(runOriginal);
 
@@ -92,7 +110,7 @@ public class UsuarioService {
             throw new RuntimeException("Ya existe un usuario con ese RUN");
         }
 
-        //Encriptacion del Run y del digito verificador cuando se actualiza el usuario
+        // Encriptacion del Run y del digito verificador cuando se actualiza el usuario
         usuario.setRun(runOriginal);
         usuario.setDigitoVerificador(dvOriginal);
         usuario.setRunHash(runHash);
@@ -113,22 +131,34 @@ public class UsuarioService {
         }
         
         if (usuarioDetails.getContrasena() != null && !usuarioDetails.getContrasena().isEmpty()) {
-            String hash = passwordEncoder.encode(usuarioDetails.getContrasena());
-            usuario.setContrasena(hash);
+            // Solo encriptar si es una nueva contraseña (no es igual al hash actual)
+            if (!passwordEncoder.matches(usuarioDetails.getContrasena(), usuario.getContrasena())) {
+                String hash = passwordEncoder.encode(usuarioDetails.getContrasena());
+                usuario.setContrasena(hash);
+            }
         }
 
 
         usuario.setAceptoTerminos(usuarioDetails.getAceptoTerminos());
-        usuario.setRol(usuarioDetails.getRol());
+        usuario.setOposicion(usuarioDetails.getOposicion());
+        
+        if (usuarioDetails.getRol() != null) {
+            usuario.setRol(usuarioDetails.getRol());
+        }
 
         return usuarioRepository.save(usuario);
     }
 
     public void deleteById(Long id) {
-        if (!usuarioRepository.existsById(id)) {
-            throw new RuntimeException("Usuario no encontrado con ID: " + id);
-        }
-        usuarioRepository.deleteById(id);
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
+        
+        // Borrado lógico (Ley ARCO - Derecho de Cancelación)
+        usuario.setActivo(false);
+        usuarioRepository.save(usuario);
+        
+        registrarSolicitudArco(usuario, SolicitudArco.TipoDerecho.CANCELACION, 
+            "El usuario ha ejercido su derecho de cancelación (borrado lógico).");
     }
 
     public List<Usuario> findByRun(String run) {
@@ -149,5 +179,38 @@ public class UsuarioService {
     public List<Usuario> findByNombreContaining(String nombre) {
         return usuarioRepository
                 .findByPrimerNombreContainingIgnoreCaseOrPrimerApellidoContainingIgnoreCase(nombre, nombre);
+    }
+
+    public Optional<Usuario> login(String identifier, String password) {
+        Optional<Usuario> usuarioOpt;
+
+        // Intentar buscar por RUT si tiene el formato
+        if (identifier.contains("-")) {
+            String[] partes = identifier.split("-");
+            String runHash = HashUtil.sha256(partes[0]);
+            usuarioOpt = usuarioRepository.findByRunHash(runHash);
+        } else {
+            // Intentar buscar por correo electrónico
+            usuarioOpt = usuarioRepository.findByCorreoElectronico(identifier);
+        }
+
+        if (usuarioOpt.isPresent()) {
+            Usuario usuario = usuarioOpt.get();
+            if (!usuario.getActivo()) {
+                throw new RuntimeException("Cuenta desactivada. Contacte al administrador.");
+            }
+            if (passwordEncoder.matches(password, usuario.getContrasena())) {
+                return Optional.of(usuario);
+            }
+        }
+
+        return Optional.empty();
+    }
+    public void registrarSolicitudArco(Usuario usuario, SolicitudArco.TipoDerecho tipo, String detalles) {
+        SolicitudArco solicitud = new SolicitudArco();
+        solicitud.setUsuario(usuario);
+        solicitud.setTipoDerecho(tipo);
+        solicitud.setDetalles(detalles);
+        arcoRepository.save(solicitud);
     }
 }
