@@ -14,7 +14,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
-@CrossOrigin(origins = "*")
 public class AuthController {
 
     @Autowired
@@ -22,29 +21,39 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
-        Optional<Usuario> usuarioOpt = usuarioService.login(
-                loginRequest.getCorreoElectronico(), 
-                loginRequest.getContrasena()
-        );
+        try {
+            System.out.println("Intento de login para: " + loginRequest.getCorreoElectronico());
+            
+            Optional<Usuario> usuarioOpt = usuarioService.login(
+                    loginRequest.getCorreoElectronico(), 
+                    loginRequest.getContrasena()
+            );
 
-        if (usuarioOpt.isPresent()) {
-            Usuario usuario = usuarioOpt.get();
-            
-            // Generar un token ficticio (puedes implementar JWT después)
-            String token = UUID.randomUUID().toString();
-            
-            LoginResponse response = LoginResponse.builder()
-                    .id(usuario.getIdUsuario())
-                    .token(token)
-                    .nombre(usuario.getPrimerNombre())
-                    .apellido(usuario.getPrimerApellido())
-                    .rol(usuario.getRol() != null ? usuario.getRol().getNombreRol() : "Externo")
-                    .correo(usuario.getCorreoElectronico())
-                    .build();
-            
-            return ResponseEntity.ok(response);
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas");
+            if (usuarioOpt.isPresent()) {
+                Usuario usuario = usuarioOpt.get();
+                System.out.println("Usuario encontrado: " + usuario.getCorreoElectronico());
+                
+                String token = UUID.randomUUID().toString();
+                
+                LoginResponse response = LoginResponse.builder()
+                        .id(usuario.getIdUsuario())
+                        .token(token)
+                        .nombre(usuario.getPrimerNombre())
+                        .apellido(usuario.getPrimerApellido())
+                        .rol(usuario.getRol() != null ? usuario.getRol().getNombreRol() : "Externo")
+                        .correo(usuario.getCorreoElectronico())
+                        .build();
+                
+                return ResponseEntity.ok(response);
+            } else {
+                System.out.println("Credenciales inválidas para: " + loginRequest.getCorreoElectronico());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Credenciales inválidas");
+            }
+        } catch (Exception e) {
+            System.err.println("Error en login: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error interno: " + e.getMessage());
         }
     }
 }
