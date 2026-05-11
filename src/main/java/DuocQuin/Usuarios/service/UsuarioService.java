@@ -182,26 +182,37 @@ public class UsuarioService {
     }
 
     public Optional<Usuario> login(String identifier, String password) {
+        System.out.println("Buscando usuario por identifier: " + identifier);
         Optional<Usuario> usuarioOpt;
 
         // Intentar buscar por RUT si tiene el formato
-        if (identifier.contains("-")) {
+        if (identifier != null && identifier.contains("-")) {
+            System.out.println("Buscando por RUN...");
             String[] partes = identifier.split("-");
             String runHash = HashUtil.sha256(partes[0]);
             usuarioOpt = usuarioRepository.findByRunHash(runHash);
         } else {
-            // Intentar buscar por correo electrónico
+            System.out.println("Buscando por Correo...");
             usuarioOpt = usuarioRepository.findByCorreoElectronico(identifier);
         }
 
         if (usuarioOpt.isPresent()) {
             Usuario usuario = usuarioOpt.get();
-            if (!usuario.getActivo()) {
+            System.out.println("Usuario hallado en DB. ID: " + usuario.getIdUsuario());
+            
+            if (usuario.getActivo() != null && !usuario.getActivo()) {
+                System.out.println("Cuenta desactivada.");
                 throw new RuntimeException("Cuenta desactivada. Contacte al administrador.");
             }
+            
             if (passwordEncoder.matches(password, usuario.getContrasena())) {
+                System.out.println("Password coincide.");
                 return Optional.of(usuario);
+            } else {
+                System.out.println("Password NO coincide.");
             }
+        } else {
+            System.out.println("Usuario NO encontrado en DB.");
         }
 
         return Optional.empty();

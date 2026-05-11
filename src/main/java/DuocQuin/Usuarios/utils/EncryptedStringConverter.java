@@ -28,7 +28,12 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
         if (dbData == null || dbData.isEmpty()) {
             return dbData;
         }
-        return encryptor.decrypt(dbData);
+        try {
+            return encryptor.decrypt(dbData);
+        } catch (Exception e) {
+            // Si la desencriptación falla, asumimos que el dato no está cifrado (dato legado)
+            return dbData;
+        }
     }
 
 }
