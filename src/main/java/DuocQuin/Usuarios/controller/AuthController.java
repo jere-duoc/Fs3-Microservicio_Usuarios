@@ -4,13 +4,13 @@ import DuocQuin.Usuarios.dto.LoginRequest;
 import DuocQuin.Usuarios.dto.LoginResponse;
 import DuocQuin.Usuarios.model.Usuario;
 import DuocQuin.Usuarios.service.UsuarioService;
+import DuocQuin.Usuarios.utils.JwtService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/auth")
@@ -18,6 +18,9 @@ public class AuthController {
 
     @Autowired
     private UsuarioService usuarioService;
+
+    @Autowired
+    private JwtService jwtService;
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
@@ -33,7 +36,7 @@ public class AuthController {
                 Usuario usuario = usuarioOpt.get();
                 System.out.println("Usuario encontrado: " + usuario.getCorreoElectronico());
                 
-                String token = UUID.randomUUID().toString();
+                String token = jwtService.generateToken(usuario);
                 
                 LoginResponse response = LoginResponse.builder()
                         .id(usuario.getIdUsuario())
