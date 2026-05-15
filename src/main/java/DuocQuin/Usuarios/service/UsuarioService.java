@@ -153,12 +153,15 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado con ID: " + id));
         
-        // Borrado lógico (Ley ARCO - Derecho de Cancelación)
-        usuario.setActivo(false);
-        usuarioRepository.save(usuario);
-        
+        // Registrar solicitud ARCO antes de eliminar (para auditoría)
         registrarSolicitudArco(usuario, SolicitudArco.TipoDerecho.CANCELACION, 
-            "El usuario ha ejercido su derecho de cancelación (borrado lógico).");
+            "El usuario ha ejercido su derecho de cancelación (borrado físico de la base de datos).");
+        
+        // Eliminar solicitudes ARCO asociadas al usuario
+        arcoRepository.deleteByUsuarioIdUsuario(id);
+        
+        // Borrado físico (Ley ARCO - Derecho de Cancelación)
+        usuarioRepository.deleteById(id);
     }
 
     public List<Usuario> findByRun(String run) {

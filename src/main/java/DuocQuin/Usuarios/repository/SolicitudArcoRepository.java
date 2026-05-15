@@ -6,4 +6,6 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface SolicitudArcoRepository extends JpaRepository<SolicitudArco, Long> {
+    
+    void deleteByUsuarioIdUsuario(Long idUsuario);
 }
