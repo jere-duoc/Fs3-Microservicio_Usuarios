@@ -24,8 +24,12 @@ FROM eclipse-temurin:17-jre
 
 WORKDIR /app
 
-# Instalar curl para el healthcheck del contenedor
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Instalar utilidades para el healthcheck y wait-for-it (`curl` y `netcat`)
+RUN apt-get update && apt-get install -y curl netcat-openbsd && rm -rf /var/lib/apt/lists/*
+
+# Copiar script para esperar por la base de datos
+COPY wait-for-it.sh /wait-for-it.sh
+RUN chmod +x /wait-for-it.sh
 
 # Crear usuario sin privilegios
 RUN useradd -m springuser
@@ -42,5 +46,5 @@ USER springuser
 # Puerto del microservicio
 EXPOSE 8081
 
-# Ejecutar aplicación con límites de memoria JVM
-ENTRYPOINT ["java","-Xms256m","-Xmx512m","-jar","/app/app.jar"]
+# Ejecutar aplicación: esperar a MySQL y luego iniciar la JVM
+ENTRYPOINT ["/wait-for-it.sh","mysql:3306","-t","60","--","java","-Xms256m","-Xmx512m","-jar","/app/app.jar"]
