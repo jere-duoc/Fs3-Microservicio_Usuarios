@@ -1,3 +1,4 @@
+CREATE DATABASE IF NOT EXISTS usuarios;
 USE usuarios;
 
 -- Eliminar tablas en orden inverso para evitar conflictos de llaves foráneas
