@@ -32,3 +32,6 @@ jobs:
                 context: .
                 push: true
                 tags: ${{steps.login-ecr.outputs.registry }}/fs3/usuario:latest
+
+
+                
