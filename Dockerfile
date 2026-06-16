@@ -47,4 +47,5 @@ USER springuser
 EXPOSE 8081
 
 # Ejecutar aplicación: esperar a MySQL y luego iniciar la JVM
-ENTRYPOINT ["/wait-for-it.sh","mysql:3306","-t","60","--","java","-Xms256m","-Xmx512m","-jar","/app/app.jar"]
+#ENTRYPOINT ["/wait-for-it.sh","mysql:3306","-t","60","--","java","-Xms256m","-Xmx512m","-jar","/app/app.jar"]
+ENTRYPOINT ["java","-Xms256m","-Xmx512m","-jar","/app/app.jar"]
