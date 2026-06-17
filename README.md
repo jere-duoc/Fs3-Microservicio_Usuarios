@@ -24,7 +24,7 @@ Este microservicio se encarga de la gestión centralizada de los funcionarios de
 ```
 El servicio estará disponible en `http://localhost:8081`.
 
-## 📡 API Endpoints Principales
+##  API Endpoints Principales
 - `POST /api/usuarios`: Crear nuevo usuario.
 - `GET /api/usuarios`: Listar todos los usuarios.
 - `PUT /api/usuarios/{id}`: Actualizar usuario (Derecho de Rectificación).
